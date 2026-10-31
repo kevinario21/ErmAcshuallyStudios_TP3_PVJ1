@@ -102,6 +102,8 @@ public class PlayerMovement : MonoBehaviour
         // Coyote time: se puede saltar unos instantes después de dejar el borde.
         // Jump buffer: si se aprieta salto justo antes de aterrizar, el salto se hace igual.
         bool grounded = IsGrounded();
+
+    
         coyoteTimer = grounded ? stats.CoyoteTime : coyoteTimer - Time.fixedDeltaTime;
         jumpBufferTimer -= Time.fixedDeltaTime;
 
