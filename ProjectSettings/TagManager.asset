@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Ground
   - Peligro
+  - Item
   layers:
   - Default
   - TransparentFX
