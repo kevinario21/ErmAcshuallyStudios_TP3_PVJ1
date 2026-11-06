@@ -15,10 +15,15 @@ public class EnemyAI : MonoBehaviour
     [Header("Puntos de patrulla")]
     [SerializeField] private Transform[] patrolPoints;
 
+    [Header("Indicador de alerta")]
+    [SerializeField] private GameObject alertIndicator;
+
     private NavMeshAgent agent;
     private PlayerMovement playerMovement;
     private PlayerHealth playerHealth;
     private Transform player;
+    private Renderer enemyRenderer;
+    private Color originalColor;
     private State state;
     private int currentPoint;
     //private bool warnedNoNavMesh;
@@ -38,13 +43,17 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        //eyeHeight = 1f;
-        //repathInterval = 0.2f;
-
         agent = GetComponent<NavMeshAgent>();
-        //agent.stoppingDistance = 1.2f;
+        enemyRenderer = GetComponent<Renderer>();
 
-        // Comprueba que el enemigo esté sobre el NavMesh
+        if (enemyRenderer != null)
+        {
+            originalColor = enemyRenderer.material.color;
+        }
+        if (alertIndicator != null)
+        {
+            alertIndicator.SetActive(false);
+        }
         if (!agent.isOnNavMesh)
         {
             NavMeshHit hit;
@@ -92,6 +101,11 @@ public class EnemyAI : MonoBehaviour
         state = State.Patrol;
         agent.isStopped = false;
         agent.speed = data.PatrolSpeed;
+        SetEnemyColor(originalColor);
+        if (alertIndicator != null)
+        {
+            alertIndicator.SetActive(false);
+        }
         currentPoint = -1;
         waitTimer = 0f;
         GoToNextPoint();
@@ -159,6 +173,11 @@ public class EnemyAI : MonoBehaviour
         state = State.Chase;
         agent.isStopped = false;
         agent.speed = data.ChaseSpeed;
+        SetEnemyColor(Color.yellow);
+        if (alertIndicator != null)
+        {
+            alertIndicator.SetActive(true);
+        }
         repathTimer = 0f;
     }
 
@@ -190,6 +209,7 @@ public class EnemyAI : MonoBehaviour
     {
         state = State.Attack;
         agent.isStopped = true;
+        SetEnemyColor(Color.red);
         nextAttackTime = 0f;
     }
     private void UpdateAttack()
@@ -207,8 +227,6 @@ public class EnemyAI : MonoBehaviour
             StartChase();
             return;
         }
-
-        // El enemigo mira hacia el jugador.
         Vector3 direction = player.position - transform.position;
         direction.y = 0f;
 
@@ -217,7 +235,6 @@ public class EnemyAI : MonoBehaviour
             transform.rotation = Quaternion.LookRotation(direction);
         }
 
-        // Ataca respetando el tiempo de espera.
         if (Time.time >= nextAttackTime)
         {
             if (playerHealth != null)
@@ -248,18 +265,45 @@ public class EnemyAI : MonoBehaviour
         return false;
     }
 
-    //VISUALIZACION DE ZONAS
+    // CAMBIAR COLOR SEGÚN EL ESTADO
+    private void SetEnemyColor(Color color)
+    {
+        if (enemyRenderer != null)
+        {
+            enemyRenderer.material.color = color;
+        }
+    }
+
+    //VISUALIZACION DE ZONAS Y CAMPO VISUAL
     private void OnDrawGizmosSelected()
     {
         if (data == null) return;
 
+        // Zona de detección por visión.
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, data.DetectionRadius);
+        // Zona de pérdida del jugador.
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, data.LoseRadius);
+        // Zona de ataque.
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, data.AttackRange);
+        // Zona de detección por proximidad.
         Gizmos.color = Color.magenta;
         Gizmos.DrawWireSphere(transform.position, data.ProximityRadius);
+
+        // Campo visual del enemigo.
+        float halfAngle = data.FieldOfView * 0.5f;
+
+        Vector3 leftDirection = Quaternion.Euler(0, -halfAngle, 0) * transform.forward;
+        Vector3 rightDirection = Quaternion.Euler(0, halfAngle, 0) * transform.forward;
+
+        Vector3 leftPoint = transform.position + leftDirection * data.DetectionRadius;
+        Vector3 rightPoint = transform.position + rightDirection * data.DetectionRadius;
+
+        Gizmos.color = Color.green;
+
+        Gizmos.DrawLine(transform.position, leftPoint);
+        Gizmos.DrawLine(transform.position, rightPoint);
     }
 }
