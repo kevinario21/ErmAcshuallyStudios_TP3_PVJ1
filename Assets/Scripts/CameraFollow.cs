@@ -49,6 +49,13 @@ public class CameraFollow : MonoBehaviour
             if (Input.GetKey(KeyCode.UpArrow)) pitch += rotateSpeed * dt;
             if (Input.GetKey(KeyCode.DownArrow)) pitch -= rotateSpeed * dt;
             pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+
+            // MOUSE: gira la cámara solo mientras se mantiene el botón derecho
+            if (Input.GetMouseButton(1))
+            {
+                yaw += Input.GetAxis("Mouse X") * 3f;
+                pitch -= Input.GetAxis("Mouse Y") * 3f;
+            }
         }
 
         // Posición deseada: detrás del jugador según el giro y la inclinación
