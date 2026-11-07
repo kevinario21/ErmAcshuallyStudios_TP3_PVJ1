@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -32,6 +33,9 @@ public class GameManager : MonoBehaviour
     private bool sessionStarted;
     private bool stateInitialized;
     private Scene lastScene;
+
+    //---------- Transicion con Fade entre niveles ----------
+    private SceneTransition sceneTransition;
 
     private void Awake()
     {
@@ -178,7 +182,7 @@ public class GameManager : MonoBehaviour
         if (index >= 0 && index + 1 < SceneNames.Levels.Length)
         {
             Debug.Log("[GameManager] Nivel completado: " + current + " -> " + SceneNames.Levels[index + 1]);
-            LoadScene(SceneNames.Levels[index + 1]);
+            StartCoroutine(FadeAndLoadScene(SceneNames.Levels[index + 1]));
         }
         else
         {
@@ -244,5 +248,26 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("[GameManager] El jugador murió");
         Lose();
+    }
+
+    // ================= Transición con Fade entre niveles ==================
+
+    private IEnumerator FadeAndLoadScene(string sceneName)
+    {
+        GetSceneTransition().FadeOut();
+        yield return GetSceneTransition().changeAlpha; // Espera a que termine el fade out
+        LoadScene(sceneName);
+    }
+    private SceneTransition GetSceneTransition()
+    {
+        if (sceneTransition == null)
+        {
+            sceneTransition = FindAnyObjectByType<SceneTransition>();
+            if (sceneTransition == null)
+            {
+                Debug.LogWarning("[GameManager] No se encontró un SceneTransition en la escena.");
+            }
+        }
+        return sceneTransition;
     }
 }
