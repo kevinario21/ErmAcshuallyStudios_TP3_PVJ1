@@ -174,8 +174,6 @@ public class GameManager : MonoBehaviour
 
         string current = SceneManager.GetActiveScene().name;
         int index = Array.IndexOf(SceneNames.Levels, current);
-        Debug.Log("Escena actual: " + current);
-        Debug.Log("Índice encontrado: " + index);
 
         if (index >= 0 && index + 1 < SceneNames.Levels.Length)
         {

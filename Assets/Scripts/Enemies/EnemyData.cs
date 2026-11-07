@@ -46,7 +46,6 @@ public class EnemyData : ScriptableObject
     public float PatrolSpeed => patrolSpeed;
     public float WaitAtPoint => waitAtPoint;
 
-
     //Detección
     public float DetectionRadius => detectionRadius;
     public float ProximityRadius => proximityRadius;

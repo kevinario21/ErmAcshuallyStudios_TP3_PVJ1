@@ -1,8 +1,8 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-// Dron centinela: patrulla un área y persigue al jugador al detectarlo.
-// Todos sus valores salen del ScriptableObject EnemyData.
+// Enemigo centinela: patrulla un área y persigue al jugador al detectarlo.
+// Sus valores se obtienen del ScriptableObject EnemyData.
 // Necesita un NavMeshAgent y estar sobre el NavMesh horneado.
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyAI : MonoBehaviour
@@ -14,6 +14,9 @@ public class EnemyAI : MonoBehaviour
 
     [Header("Puntos de patrulla")]
     [SerializeField] private Transform[] patrolPoints;
+    [Header("Guardia estacionario")]
+    [SerializeField] private bool stationaryGuard = false;
+    [SerializeField] private float rotationSpeed = 45f;
 
     [Header("Indicador de alerta")]
     [SerializeField] private GameObject alertIndicator;
@@ -23,16 +26,16 @@ public class EnemyAI : MonoBehaviour
     private PlayerHealth playerHealth;
     private Transform player;
     private Renderer enemyRenderer;
-    private Color originalColor;
     private State state;
+    private Color originalColor;
     private int currentPoint;
-    //private bool warnedNoNavMesh;
     private float waitTimer;
     private float repathTimer;
     private float nextAttackTime;
-    private float eyeHeight = 1f;
-    private float repathInterval= 0.2f; 
     private Vector3 homePosition;
+    private bool returningToPost;
+    private const float EyeHeight = 1f;
+    private const float RepathInterval= 0.2f; 
 
     private void Start()
     {
@@ -46,14 +49,9 @@ public class EnemyAI : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         enemyRenderer = GetComponent<Renderer>();
 
-        if (enemyRenderer != null)
-        {
-            originalColor = enemyRenderer.material.color;
-        }
-        if (alertIndicator != null)
-        {
-            alertIndicator.SetActive(false);
-        }
+        if (enemyRenderer != null) originalColor = enemyRenderer.material.color;
+        if (alertIndicator != null) alertIndicator.SetActive(false);
+
         if (!agent.isOnNavMesh)
         {
             NavMeshHit hit;
@@ -61,8 +59,7 @@ public class EnemyAI : MonoBehaviour
             if (NavMesh.SamplePosition(transform.position, out hit, 10f, NavMesh.AllAreas))
                 agent.Warp(hit.position);
         }
-
-        //Busca al jugador en la escena
+        homePosition = transform.position;
         playerMovement = FindAnyObjectByType<PlayerMovement>();
         if (playerMovement != null)
         {
@@ -70,7 +67,6 @@ public class EnemyAI : MonoBehaviour
             playerHealth = player.GetComponent<PlayerHealth>();
         }
 
-        homePosition = transform.position;
         agent.stoppingDistance = Mathf.Min(0.8f, data.AttackRange);
         StartPatrol();
     }
@@ -108,7 +104,29 @@ public class EnemyAI : MonoBehaviour
         }
         currentPoint = -1;
         waitTimer = 0f;
-        GoToNextPoint();
+        returningToPost = false;
+        if (stationaryGuard) agent.updateRotation = false;
+        else
+        {
+            agent.updateRotation = true;
+            GoToNextPoint();
+        }
+    }
+    private void ReturnToPost()
+    {
+        state = State.Patrol;
+
+        agent.isStopped = false;
+        agent.updateRotation = true;
+        agent.speed = data.PatrolSpeed;
+
+        agent.SetDestination(homePosition);
+
+        returningToPost = true;
+
+        SetEnemyColor(originalColor);
+
+        if (alertIndicator != null) alertIndicator.SetActive(false);
     }
 
     private void UpdatePatrol()
@@ -118,9 +136,25 @@ public class EnemyAI : MonoBehaviour
             StartChase();
             return;
         }
+        if (stationaryGuard)
+        {
+            if (returningToPost)
+            {
+                if (!agent.pathPending &&
+                    agent.remainingDistance <= agent.stoppingDistance + 0.2f)
+                {
+                    agent.isStopped = true;
+                    agent.updateRotation = false;
+                    returningToPost = false;
+                }
 
-        if (patrolPoints == null || patrolPoints.Length == 0)
+                return;
+            }
+            transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
             return;
+        }
+
+        if (patrolPoints == null || patrolPoints.Length == 0) return;
 
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
@@ -132,25 +166,9 @@ public class EnemyAI : MonoBehaviour
             }
         }
     }
-
-    // DETECCIÓN POR VISIÓN O PROXIMIDAD
-    private bool CanDetectPlayer()
-    {
-        if (playerMovement.Runtime.Invisible)
-            return false;
-
-        float distance = Vector3.Distance(transform.position, player.position);
-
-        if (distance <= data.ProximityRadius)
-            return true;
-
-        return CanSeePlayer();
-    }
-
     private void GoToNextPoint()
     {
-        if (patrolPoints == null || patrolPoints.Length == 0)
-            return;
+        if (patrolPoints == null || patrolPoints.Length == 0) return;
 
         int nextPoint = Random.Range(0, patrolPoints.Length);
 
@@ -161,10 +179,41 @@ public class EnemyAI : MonoBehaviour
 
         currentPoint = nextPoint;
 
-        if (patrolPoints[currentPoint] == null)
-            return;
+        if (patrolPoints[currentPoint] == null) return;
 
         agent.SetDestination(patrolPoints[currentPoint].position);
+    }
+
+    // DETECCIÓN DEL JUGADOR POR VISIÓN O PROXIMIDAD
+    private bool CanDetectPlayer()
+    {
+        if (player == null || playerMovement == null) return false;
+
+        if (playerMovement.Runtime.Invisible) return false;
+
+        float distance = Vector3.Distance(transform.position, player.position);
+
+        if (distance <= data.ProximityRadius) return true;
+
+        return CanSeePlayer();
+    }
+    private bool CanSeePlayer()
+    {
+        if (player == null || playerMovement == null) return false;
+        if (playerMovement.Runtime.Invisible) return false;
+
+        Vector3 eye = transform.position + Vector3.up * EyeHeight;
+        Vector3 toPlayer = (player.position + Vector3.up * 0.5f) - eye;
+
+        if (toPlayer.magnitude > data.DetectionRadius) return false;
+        if (Vector3.Angle(transform.forward, toPlayer) > data.FieldOfView * 0.5f) return false;
+
+        RaycastHit hitR;
+
+        if (Physics.Raycast(eye, toPlayer.normalized, out hitR, data.DetectionRadius, ~0, QueryTriggerInteraction.Ignore))
+            return hitR.transform == player || hitR.transform.IsChildOf(player);
+
+        return false;
     }
 
     // PERSECUCIÓN
@@ -172,12 +221,10 @@ public class EnemyAI : MonoBehaviour
     {
         state = State.Chase;
         agent.isStopped = false;
+        agent.updateRotation = true;
         agent.speed = data.ChaseSpeed;
         SetEnemyColor(Color.yellow);
-        if (alertIndicator != null)
-        {
-            alertIndicator.SetActive(true);
-        }
+        if (alertIndicator != null) alertIndicator.SetActive(true);
         repathTimer = 0f;
     }
 
@@ -187,7 +234,7 @@ public class EnemyAI : MonoBehaviour
 
         if (distance > data.LoseRadius || playerMovement.Runtime.Invisible)
         {
-            StartPatrol();
+            if (stationaryGuard) ReturnToPost(); else StartPatrol();
             return;
         }
         if (distance <= data.AttackRange)
@@ -197,7 +244,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         repathTimer += Time.deltaTime;
-        if (repathTimer >= repathInterval)
+        if (repathTimer >= RepathInterval)
         {
             repathTimer = 0f;
             agent.SetDestination(player.position);
@@ -209,6 +256,7 @@ public class EnemyAI : MonoBehaviour
     {
         state = State.Attack;
         agent.isStopped = true;
+        agent.updateRotation = false;
         SetEnemyColor(Color.red);
         nextAttackTime = 0f;
     }
@@ -218,7 +266,7 @@ public class EnemyAI : MonoBehaviour
 
         if (distance > data.LoseRadius || playerMovement.Runtime.Invisible)
         {
-            StartPatrol();
+            if (stationaryGuard) ReturnToPost(); else StartPatrol();
             return;
         }
 
@@ -230,48 +278,20 @@ public class EnemyAI : MonoBehaviour
         Vector3 direction = player.position - transform.position;
         direction.y = 0f;
 
-        if (direction != Vector3.zero)
-        {
-            transform.rotation = Quaternion.LookRotation(direction);
-        }
+        if (direction != Vector3.zero) transform.rotation = Quaternion.LookRotation(direction);
 
         if (Time.time >= nextAttackTime)
         {
-            if (playerHealth != null)
-                playerHealth.TakeDamage(data.ContactDamage);
-            else
-                Debug.LogWarning("EnemyAI: el jugador no tiene PlayerHealth.");
-
+            if (playerHealth != null) playerHealth.TakeDamage(data.ContactDamage);
+            
             nextAttackTime = Time.time + data.AttackCooldown;
         }
-    }
-
-    // DETECCIÓN
-    private bool CanSeePlayer()
-    {
-        if (playerMovement.Runtime.Invisible) return false;
-
-        Vector3 eye = transform.position + Vector3.up * eyeHeight;
-        Vector3 toPlayer = (player.position + Vector3.up * 0.5f) - eye;
-
-        if (toPlayer.magnitude > data.DetectionRadius) return false;
-        if (Vector3.Angle(transform.forward, toPlayer) > data.FieldOfView * 0.5f) return false;
-
-        RaycastHit hitR;
-
-        if (Physics.Raycast(eye, toPlayer.normalized, out hitR, data.DetectionRadius, ~0, QueryTriggerInteraction.Ignore))
-            return hitR.transform==player || hitR.transform.IsChildOf(player);
-
-        return false;
     }
 
     // CAMBIAR COLOR SEGÚN EL ESTADO
     private void SetEnemyColor(Color color)
     {
-        if (enemyRenderer != null)
-        {
-            enemyRenderer.material.color = color;
-        }
+        if (enemyRenderer != null) enemyRenderer.material.color = color;
     }
 
     //VISUALIZACION DE ZONAS Y CAMPO VISUAL
@@ -302,7 +322,6 @@ public class EnemyAI : MonoBehaviour
         Vector3 rightPoint = transform.position + rightDirection * data.DetectionRadius;
 
         Gizmos.color = Color.green;
-
         Gizmos.DrawLine(transform.position, leftPoint);
         Gizmos.DrawLine(transform.position, rightPoint);
     }
