@@ -10,18 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 47cf66bbaf8fdfe4d94b2a77f11867d8, type: 3}
-  m_Name: EnemyData
+  m_Name: EnemyData_StationaryGuard
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  displayName: Dron centinela
+  displayName: "Guardi\xE1n del pasillo"
   enemyTag: Enemy
   prefab: {fileID: 0}
   maxHealth: 1
   contactDamage: 10
   pointsReward: 0
+  attackRange: 2
+  attackCooldown: 1.5
   patrolRadius: 12
-  patrolSpeed: 2
-  waitAtPoint: 1.5
-  detectionRadius: 10
-  loseRadius: 14
-  fieldOfView: 120
-  chaseSpeed: 4.5
+  patrolSpeed: 3.2
+  waitAtPoint: 2
+  detectionRadius: 9
+  proximityRadius: 2
+  loseRadius: 11
+  fieldOfView: 80
+  chaseSpeed: 2.5
