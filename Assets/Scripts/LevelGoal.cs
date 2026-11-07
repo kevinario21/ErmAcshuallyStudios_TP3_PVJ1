@@ -8,7 +8,7 @@ public class LevelGoal : MonoBehaviour
     private bool reached;
 
     [SerializeField] private GameObject goalEffect;
-    [SerializeField] private float celebrationDelay = 3f; 
+    [SerializeField] private float celebrationDelay = 2f; 
    
     private void OnTriggerEnter(Collider other)
     {

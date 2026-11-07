@@ -67,7 +67,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelGoal
   goalEffect: {fileID: 267287664386135424}
-  celebrationDelay: 3
+  celebrationDelay: 2
 --- !u!1 &267287664386135424
 GameObject:
   m_ObjectHideFlags: 0

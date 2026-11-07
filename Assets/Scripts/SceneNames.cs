@@ -5,11 +5,9 @@ public static class SceneNames
     public const string Tutorial = "Tutorial";
     public const string Nivel1 = "Nivel1";
     public const string Nivel2 = "Nivel2";
-    public const string Nivel3 = "SampleScene";
-
     public const string Victory = "Victory";
     public const string GameOver = "GameOver";
 
     // Orden de los niveles jugables. El GameManager pasa de uno al siguiente.
-    public static readonly string[] Levels = { Tutorial, Nivel1, Nivel2, Nivel3 };
+    public static readonly string[] Levels = { Tutorial, Nivel1, Nivel2 };
 }
