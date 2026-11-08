@@ -22,6 +22,11 @@ public class GameManager : MonoBehaviour
     public int MaxHealth { get; private set; }
     public IReadOnlyList<ItemData> Items => items;
 
+    // ---------- Referencias para la UI en Niveles ----------
+    [Header("Referencias de UI en Niveles")]
+    [SerializeField] private GestorUI gestorUI;
+    [SerializeField] private int indicePanelPausa = 0; // Índice del panel de pausa en el GestorUI
+
     // ---------- Eventos para la UI y otros sistemas ----------
     public event Action<GameState> OnStateChanged;
     public event Action<int> OnScoreChanged;
@@ -109,12 +114,39 @@ public class GameManager : MonoBehaviour
 
     private void SetState(GameState newState)
     {
+        Debug.Log("Entrando a SetState: " + newState);
         // Solo se congela el tiempo en pausa
         Time.timeScale = (newState == GameState.Paused) ? 0f : 1f;
 
         if (stateInitialized && State == newState) return;
         stateInitialized = true;
         State = newState;
+
+        // Auto-buscar el GestorUI de la escena actual si se perdió la referencia por el cambio de escena
+        //  if (gestorUI == null)
+        // {
+        gestorUI = FindAnyObjectByType<GestorUI>();
+
+        Debug.Log("GESTOR UI = " + gestorUI);
+        // }
+
+        Debug.Log("GESTOR UI = " + gestorUI);
+
+        if (gestorUI != null)
+        {
+            Debug.Log("ENTRO EN EL BLOQUE UI");
+
+            if (newState == GameState.Paused)
+            {
+                Debug.Log("VOY A MOSTRAR EL PANEL DE PAUSA");
+                gestorUI.MostrarPaneles(indicePanelPausa);
+            }
+            else if (newState == GameState.Playing)
+            {
+                Debug.Log("VOY A OCULTAR LOS PANELES");
+                gestorUI.OcultarPaneles();
+            }
+        }
 
         Debug.Log("[GameManager] Estado: " + State + " | Vida: " + CurrentHealth + "/" + MaxHealth +
                   " | Puntaje: " + Score);
@@ -146,8 +178,12 @@ public class GameManager : MonoBehaviour
 
     public void TogglePause()
     {
-        if (State == GameState.Playing) SetState(GameState.Paused);
-        else if (State == GameState.Paused) SetState(GameState.Playing);
+        FindAnyObjectByType<GestorUI>()?.MostrarPaneles(2);
+
+        if (State == GameState.Playing)
+            SetState(GameState.Paused);
+        else if (State == GameState.Paused)
+            SetState(GameState.Playing);
     }
 
     public void ResumeGame()
@@ -258,6 +294,7 @@ public class GameManager : MonoBehaviour
         yield return GetSceneTransition().changeAlpha; // Espera a que termine el fade out
         LoadScene(sceneName);
     }
+
     private SceneTransition GetSceneTransition()
     {
         if (sceneTransition == null)
