@@ -22,6 +22,11 @@ public class GameManager : MonoBehaviour
     public int MaxHealth { get; private set; }
     public IReadOnlyList<ItemData> Items => items;
 
+    // ---------- Referencias para la UI en Niveles ----------
+    [Header("Referencias de UI en Niveles")]
+    [SerializeField] private GestorUI gestorUI;
+    [SerializeField] private int indicePanelPausa = 2; // Índice del panel de pausa en el GestorUI
+
     // ---------- Eventos para la UI y otros sistemas ----------
     public event Action<GameState> OnStateChanged;
     public event Action<int> OnScoreChanged;
@@ -115,6 +120,19 @@ public class GameManager : MonoBehaviour
         if (stateInitialized && State == newState) return;
         stateInitialized = true;
         State = newState;
+
+        // Control automático de la UI de pausa mediante el GestorUI
+        if (gestorUI != null)
+        {
+            if (newState == GameState.Paused)
+            {
+                gestorUI.MostrarPaneles(2); // Muestra el panel/texto de pausa
+            }
+            else if (newState == GameState.Playing)
+            {
+                gestorUI.OcultarPaneles(); // Oculta los paneles al volver al juego fluido
+            }
+        }
 
         Debug.Log("[GameManager] Estado: " + State + " | Vida: " + CurrentHealth + "/" + MaxHealth +
                   " | Puntaje: " + Score);
@@ -258,6 +276,7 @@ public class GameManager : MonoBehaviour
         yield return GetSceneTransition().changeAlpha; // Espera a que termine el fade out
         LoadScene(sceneName);
     }
+
     private SceneTransition GetSceneTransition()
     {
         if (sceneTransition == null)
