@@ -25,7 +25,7 @@ public class GameManager : MonoBehaviour
     // ---------- Referencias para la UI en Niveles ----------
     [Header("Referencias de UI en Niveles")]
     [SerializeField] private GestorUI gestorUI;
-    [SerializeField] private int indicePanelPausa = 2; // Índice del panel de pausa en el GestorUI
+    [SerializeField] private int indicePanelPausa = 0; // Índice del panel de pausa en el GestorUI
 
     // ---------- Eventos para la UI y otros sistemas ----------
     public event Action<GameState> OnStateChanged;
@@ -114,6 +114,7 @@ public class GameManager : MonoBehaviour
 
     private void SetState(GameState newState)
     {
+        Debug.Log("Entrando a SetState: " + newState);
         // Solo se congela el tiempo en pausa
         Time.timeScale = (newState == GameState.Paused) ? 0f : 1f;
 
@@ -121,16 +122,29 @@ public class GameManager : MonoBehaviour
         stateInitialized = true;
         State = newState;
 
-        // Control automático de la UI de pausa mediante el GestorUI
+        // Auto-buscar el GestorUI de la escena actual si se perdió la referencia por el cambio de escena
+        //  if (gestorUI == null)
+        // {
+        gestorUI = FindAnyObjectByType<GestorUI>();
+
+        Debug.Log("GESTOR UI = " + gestorUI);
+        // }
+
+        Debug.Log("GESTOR UI = " + gestorUI);
+
         if (gestorUI != null)
         {
+            Debug.Log("ENTRO EN EL BLOQUE UI");
+
             if (newState == GameState.Paused)
             {
-                gestorUI.MostrarPaneles(2); // Muestra el panel/texto de pausa
+                Debug.Log("VOY A MOSTRAR EL PANEL DE PAUSA");
+                gestorUI.MostrarPaneles(indicePanelPausa);
             }
             else if (newState == GameState.Playing)
             {
-                gestorUI.OcultarPaneles(); // Oculta los paneles al volver al juego fluido
+                Debug.Log("VOY A OCULTAR LOS PANELES");
+                gestorUI.OcultarPaneles();
             }
         }
 
@@ -164,8 +178,12 @@ public class GameManager : MonoBehaviour
 
     public void TogglePause()
     {
-        if (State == GameState.Playing) SetState(GameState.Paused);
-        else if (State == GameState.Paused) SetState(GameState.Playing);
+        FindAnyObjectByType<GestorUI>()?.MostrarPaneles(2);
+
+        if (State == GameState.Playing)
+            SetState(GameState.Paused);
+        else if (State == GameState.Paused)
+            SetState(GameState.Playing);
     }
 
     public void ResumeGame()

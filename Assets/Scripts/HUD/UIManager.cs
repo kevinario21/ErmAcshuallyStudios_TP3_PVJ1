@@ -15,6 +15,7 @@ public class GestorUI : MonoBehaviour
 
     public void MostrarPaneles(int indice)
     {
+        Debug.Log("MostrarPaneles llamado. Índice: " + indice);
         if (indice < 0 || indice >= paneles.Length)
         {
             Debug.LogError("Error el indice es incorrecto...");
